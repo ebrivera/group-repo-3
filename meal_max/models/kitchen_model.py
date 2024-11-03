@@ -28,6 +28,21 @@ class Meal:
 
 
 def create_meal(meal: str, cuisine: str, price: float, difficulty: str) -> None:
+    """
+    Creates a new meal in the meal table.
+    
+    Args:
+        meal (str): The name of the meal.
+        cuisine (str): The cuisine that the meal belongs to.
+        price (float): The price of the meal.
+        difficulty (str): The difficulty of the meal.
+        
+    Raises:
+        ValueError: If the input price is <=0 or the input difficulty is invalid.
+        sqlite3.IntegrityError: If a meal with the same name already exists.
+        sqlite3.Error: For any other database errors.
+    
+    """
     if not isinstance(price, (int, float)) or price <= 0:
         raise ValueError(f"Invalid price: {price}. Price must be a positive number.")
     if difficulty not in ['LOW', 'MED', 'HIGH']:
@@ -74,6 +89,17 @@ def clear_meals() -> None:
         raise e
 
 def delete_meal(meal_id: int) -> None:
+    """
+    Removes the meal with the provided meal_id from the table.
+
+    Args:
+        meal_id (int): The id of the meal that needs to be removed.
+
+    Raises:
+        ValueError: If the meal with the input meal_id has already been deleted.
+        ValueError: If the meal with the input meal_id is not found.
+        sqlite3.Error: For any other database errors.
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -97,6 +123,18 @@ def delete_meal(meal_id: int) -> None:
         raise e
 
 def get_leaderboard(sort_by: str="wins") -> dict[str, Any]:
+    """
+    Returns a leaderboard dictionary of all the meals that are not deleted and have already combatted
+    after they are sorted from largest to smallest in terms of win_pct.
+    
+    Args:
+        sort_by (str): If str == "wins", sort the songs by win_pct or wins in descending order.
+    Returns: 
+        dict[str, Any]: A leaderboard dictionary of all meals sorted by win_pct or wins in descending order.
+    Raises:
+        ValueError: If the input sort_by is invalid.
+        sqlite3.Error: For any other database errors.
+    """
     query = """
         SELECT id, meal, cuisine, price, difficulty, battles, wins, (wins * 1.0 / battles) AS win_pct
         FROM meals WHERE deleted = false AND battles > 0
@@ -138,6 +176,18 @@ def get_leaderboard(sort_by: str="wins") -> dict[str, Any]:
         raise e
 
 def get_meal_by_id(meal_id: int) -> Meal:
+    """
+    Retrieves a meal by its meal ID.
+    
+    Args:
+        meal_id (int): The ID of the meal to retrieve.
+        
+    Returns:
+        Meal: The Meal object corresponding to the meal_id.
+        
+    Raises:
+        ValueError: If the meal corresponding to the meal_id is not found or has already been deleted.
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -159,6 +209,19 @@ def get_meal_by_id(meal_id: int) -> Meal:
 
 
 def get_meal_by_name(meal_name: str) -> Meal:
+    """
+    Retrieves a meal by its name.
+    
+    Args:
+        meal_name (str): The name of the meal to retrieve.
+
+    Raises:
+        ValueError: If the meal corresponding to the meal_name is not found or has already been deleted.
+        sqlite3.Error: For any other database errors.
+
+    Returns:
+        Meal: The Meal object corresponding to the meal_name.
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -180,6 +243,18 @@ def get_meal_by_name(meal_name: str) -> Meal:
 
 
 def update_meal_stats(meal_id: int, result: str) -> None:
+    """
+    Increments the wins count of a meal by meal_id if it wins, and increment the battle count by 1 regardless of the outcome.
+
+    Args:
+        meal_id (int): The ID of the meal whose stats need to be updated.
+        result (str): The result of the battle (win or loss).
+
+    Raises:
+        ValueError: If the meal with the corresponding meal_id is not found or has already been deleted, 
+        or if the input parameter result is invalid.
+        sqlite3.Error: For any other database errors.
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
