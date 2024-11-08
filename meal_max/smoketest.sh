@@ -129,15 +129,18 @@ get_meal_by_name() {
 ############################################################
 
 battle() {
-    echo "Two meals enter, one meal leaves!"
-    response=$(curl -s -X POST "$BASE_URL/battle")
-
-    if echo "$response" | grep -q '"status": "success"'; then
-        echo "Battle takes place successfully."
-    else
-        echo "Failed to battle"
-        exit 1
+  echo "Initiating battle between combatants..."
+  response=$(curl -s -X GET "$BASE_URL/battle") 
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Battle completed successfully."
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Battle Result JSON:"
+      echo "$response" | jq .
     fi
+  else
+    echo "Failed to initiate battle."
+    exit 1
+  fi
 }
 
 clear_combatants() {
@@ -168,6 +171,59 @@ get_combatants() {
   fi
 }
 
-prep_combatants() {
-    
+prep_combatant() {
+  meal_name=$1
+
+  echo "Preparing combatant ($meal_name)..."
+  response=$(curl -s -X POST "$BASE_URL/prep-combatant" -H "Content-Type: application/json" \
+    -d "{\"meal\":\"$meal_name\"}")
+  
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Combatant ($meal_name) prepared successfully."
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Preparation Response JSON:"
+      echo "$response" | jq .
+    fi
+  else
+    echo "Failed to prepare combatant ($meal_name)."
+    exit 1
+  fi
 }
+
+############################################################
+#
+# Leaderboard
+#
+############################################################
+
+get_leaderboard() {
+  sort_by=$1
+  echo "Retrieving leaderboard sorted by ($sort_by)..."
+  response=$(curl -s -X GET "$BASE_URL/leaderboard?sort=$sort_by")
+  if echo "$response" | grep -q '"status": "success"'; then
+    echo "Leaderboard retrieved successfully."
+    if [ "$ECHO_JSON" = true ]; then
+      echo "Leaderboard JSON:"
+      echo "$response" | jq .
+    fi
+  else
+    echo "Failed to retrieve leaderboard."
+    exit 1
+  fi
+}
+
+# Execute the smoketests
+check_health
+check_db
+clear_catalog
+create_meal "Pizza" "Italian" 10.0 "MED"
+create_meal "Burger" "American" 8.0 "LOW"
+get_meal_by_name "Pizza"
+get_meal_by_id 1
+delete_meal_by_id 2
+prep_combatant "Pizza"
+prep_combatant "Burger"
+get_combatants
+battle
+clear_combatants
+get_leaderboard "wins"
