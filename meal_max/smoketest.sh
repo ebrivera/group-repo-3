@@ -238,3 +238,4 @@ battle
 delete_meal_by_id 1
 get_leaderboard "wins"
 clear_catalog
+
