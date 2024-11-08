@@ -2,8 +2,8 @@ import pytest
 
 from meal_max.models.battle_model import BattleModel
 from meal_max.models.kitchen_model import Meal
-from meal_max.utils.random_utils import get_random
 
+### Fixtures ###
 
 @pytest.fixture
 def battle_model():
@@ -33,8 +33,22 @@ def sample_battle(sample_meal1, sample_meal2):
 @pytest.fixture
 def mock_random(mocker):
     """Fixture to mock get_random with a consistent value."""
-    return mocker.patch("meal_max.models.battle_model.get_random")
+    return mocker.patch("meal_max.utils.random_utils.get_random", return_value=0.5)
 
+@pytest.fixture
+def mock_db_connection(mocker):
+    """Mock the database connection to avoid real database interactions."""
+    mock_conn = mocker.MagicMock()
+    mock_cursor = mocker.MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.fetchone.return_value = None  # Default behavior for SELECT queries
+    mocker.patch("meal_max.utils.sql_utils.get_db_connection", return_value=mock_conn)
+    return mock_cursor
+
+
+####################
+# Clear Combatants
+###################
 
 def test_clear_combatants(battle_model, sample_meal1, sample_meal2):
      """Test clearing the combatants list."""
@@ -44,77 +58,52 @@ def test_clear_combatants(battle_model, sample_meal1, sample_meal2):
      battle_model.clear_combatants()
      assert len(battle_model.get_combatants()) == 0, "Combatants list should be empty after clearing."
 
-
-
-#Unit tests for battle
-def test_battle(battle_model, sample_battle, mocker):
-    """Test the battle method for correct winner determination."""
-    # Mock the update_meal_stats function
-    mock_update_meal_stats = mocker.patch("meal_max.models.kitchen_model.update_meal_stats")
-
-    # Set up combatants
-    battle_model.combatants.extend(sample_battle["meals"])
-
-    # Run the battle and get the winner
-    winner_meal = battle_model.battle()
-
-    # Check if the correct winner was returned
-    assert winner_meal == sample_battle["winner"].meal, "Winner should be determined correctly."
-
-    # Verify that update_meal_stats was called with the winner and loser
-    mock_update_meal_stats.assert_any_call(sample_battle["winner"].id, 'win')
-    mock_update_meal_stats.assert_any_call(sample_battle["loser"].id, 'loss')
-
-    # Check if the loser was removed from combatants
-    assert len(battle_model.get_combatants()) == 1, "Loser should have been removed from combatants list."
-
-
-
-def test_clear_combatants(battle_model, sample_meal1, sample_meal2):
-    """Test clearing the combatants list."""
+def test_clear_combatants_one(battle_model, sample_meal1):
+    """Test clearing the combatants list with only one combatant."""
     battle_model.prep_combatant(sample_meal1)
-    battle_model.prep_combatant(sample_meal2)
-    assert len(battle_model.get_combatants()) == 2, "Two combatants should be present before clearing."
+    assert len(battle_model.get_combatants()) == 1, "One combatant should be present before clearing."
     battle_model.clear_combatants()
     assert len(battle_model.get_combatants()) == 0, "Combatants list should be empty after clearing."
 
-def test_battle_zero_combatants(battle_model):
-    """Test that ValueError is raised when not enough combatants are available."""
-    with pytest.raises(ValueError, match="Two combatants must be prepped for a battle."):
-        battle_model.battle()
-
-
-def test_battle_with_one_combatant(battle_model, sample_meal1):
-    """Test that battle raises a ValueError when there is only one combatant."""
-    battle_model.prep_combatant(sample_meal1)
-    with pytest.raises(ValueError, match="Two combatants must be prepped for a battle."):
-        battle_model.battle()
-
-
-def test_get_battle_score(battle_model,sample_meal1, mocker):
-    """Test that get_battle_score returns a consistent score."""
-    # Mock the random utility function to return a fixed value
-    mocker.patch("meal_max.utils.random_utils.get_random", return_value=10)
-
-    # Call the function and verify the result
+def test_get_battle_score(battle_model, sample_meal1):
+    """Test battle score calculation for a combatant."""
     score = battle_model.get_battle_score(sample_meal1)
-    assert score == 50.0, "Expected battle score to be 50.0 for the sample meal."
+    difficulty_modifier = {"HIGH": 1, "MED": 2, "LOW": 3}
+    assert score == (sample_meal1.price * len(sample_meal1.cuisine)) - difficulty_modifier[sample_meal1.difficulty], "Battle score should be calculated correctly."
 
+def test_get_battle_score2(battle_model, sample_meal2):
+    """Test battle score calculation for a second combatant."""
+    score = battle_model.get_battle_score(sample_meal2)
+    difficulty_modifier = {"HIGH": 1, "MED": 2, "LOW": 3}
+    assert score == (sample_meal2.price * len(sample_meal2.cuisine)) - difficulty_modifier[sample_meal2.difficulty], "Battle score should be calculated correctly."
 
+def test_get_combatants_non_empty(battle_model, sample_meal1, sample_meal2):
+    """Test that get_combatants returns the correct list of combatants when added."""
+    # Add sample meals to the combatants list
+    battle_model.prep_combatant(sample_meal1)
+    battle_model.prep_combatant(sample_meal2)
 
-# unit test for prep_combatants
-def test_prep_combatant_empty_list(battle_model):
+    # Retrieve combatants and verify they match the added meals
+    combatants = battle_model.get_combatants()
+    assert combatants == [sample_meal1, sample_meal2], "Combatants list should match the added meals."
+    assert len(combatants) == 2, "Combatants list should contain two meals after adding them."
+
+def test_get_combatants_empty(battle_model):
+    """Test that get_combatants returns an empty list when no combatants are added."""
+    combatants = battle_model.get_combatants()
+    assert combatants == [], "Combatants list should be empty initially."
+
+def test_prep_combatant_no_combatants(battle_model):
     """Test that ValueError is raised when no combatants are added."""
     with pytest.raises(ValueError, match="Two combatants must be prepped for a battle."):
-        battle_model.battle() 
+        battle_model.battle()
 
-def test_prep_combatant_zero_list(battle_model, sample_meal1):
+def test_prep_combatant_one_combatant(battle_model, sample_meal1):
     """Test adding a combatant to an initially empty list."""
     battle_model.prep_combatant(sample_meal1)
     assert battle_model.get_combatants() == [sample_meal1], "Expected combatants list to contain the first added meal."
 
-
-def test_prep_combatant_second_combatant(battle_model, sample_meal1, sample_meal2):
+def test_prep_combatant_two_combatants(battle_model, sample_meal1, sample_meal2):
     """Test adding a second combatant to the list."""
     battle_model.prep_combatant(sample_meal1)
     battle_model.prep_combatant(sample_meal2)
@@ -130,24 +119,47 @@ def test_prep_combatant_full_list(battle_model, sample_meal1, sample_meal2):
     with pytest.raises(ValueError, match="Combatant list is full, cannot add more combatants."):
         battle_model.prep_combatant(sample_meal2)
 
-# unit test for get_combatants
+####################
+# Battle
+###################
 
-def test_get_combatants_empty(battle_model):
-    """Test that get_combatants returns an empty list when no combatants are added."""
-    # Check that combatants list is initially empty
-    combatants = battle_model.get_combatants()
-    assert combatants == [], "Combatants list should be empty initially."
+def test_battle_no_combatants(battle_model):
+    """Test that ValueError is raised when there are no combatants."""
+    with pytest.raises(ValueError, match="Two combatants must be prepped for a battle."):
+        battle_model.battle()
 
 
-def test_get_combatants_non_empty(battle_model, sample_meal1, sample_meal2):
-    """Test that get_combatants returns the correct list of combatants when added."""
-    # Add sample meals to the combatants list
+def test_battle_one_combatant(battle_model, sample_meal1):
+    """Test that ValueError is raised when there is only one combatant."""
+    battle_model.prep_combatant(sample_meal1)
+
+    with pytest.raises(ValueError, match="Two combatants must be prepped for a battle."):
+        battle_model.battle()
+
+def test_battle_two_combatants(battle_model, sample_meal1, sample_meal2, mocker):
+    """Test that battle returns the correct winner and updates stats."""
+
+    # Mock `get_random` to return a consistent value
+    mock_random = mocker.patch("music_collection.models.song_model.get_random", return_value=0.5)
+
+    # Mock `update_meal_stats` to track calls
+    mock_update_meal_stats = mocker.patch("meal_max.models.kitchen_model.update_meal_stats")
+
+    # Prepare combatants
     battle_model.prep_combatant(sample_meal1)
     battle_model.prep_combatant(sample_meal2)
 
-    # Retrieve combatants and verify they match the added meals
-    combatants = battle_model.get_combatants()
-    assert combatants == [sample_meal1, sample_meal2], "Combatants list should match the added meals."
-    assert len(combatants) == 2, "Combatants list should contain two meals after adding them."
+    # Conduct the battle
+    winner = battle_model.battle()
 
+    # Assertions
+    assert winner == sample_meal2.meal, "Expected second combatant to win based on mocked random value."
 
+    # Ensure `update_meal_stats` was called for both combatants with correct statuses
+    mock_update_meal_stats.assert_any_call(sample_meal1.id, "loss")
+    mock_update_meal_stats.assert_any_call(sample_meal2.id, "win")
+    assert mock_update_meal_stats.call_count == 2, "Expected two calls to update_meal_stats."
+
+    # Validate that the correct combatant remains in the list
+    assert sample_meal1 not in battle_model.get_combatants(), "Losing combatant should be removed."
+    assert sample_meal2 in battle_model.get_combatants(), "Winning combatant should remain."
