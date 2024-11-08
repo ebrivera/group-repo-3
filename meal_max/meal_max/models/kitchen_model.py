@@ -27,7 +27,7 @@ class Meal:
             raise ValueError("Difficulty must be 'LOW', 'MED', or 'HIGH'.")
 
 
-def create_meal(meal: str, cuisine: str, price: float, difficulty: str) -> None:
+def create_meal(meal: str, cuisine: str, price: float, difficulty: str) -> None: # Done
     """
     Creates a new meal in the meal table.
     
@@ -67,7 +67,7 @@ def create_meal(meal: str, cuisine: str, price: float, difficulty: str) -> None:
         logger.error("Database error: %s", str(e))
         raise e
 
-def clear_meals() -> None:
+def clear_meals() -> None: # Done
     """
     Recreates the meals table, effectively deleting all meals.
 
@@ -88,7 +88,7 @@ def clear_meals() -> None:
         logger.error("Database error while clearing meals: %s", str(e))
         raise e
 
-def delete_meal(meal_id: int) -> None:
+def delete_meal(meal_id: int) -> None: # Done
     """
     Removes the meal with the provided meal_id from the table.
 
@@ -175,7 +175,7 @@ def get_leaderboard(sort_by: str="wins") -> dict[str, Any]:
         logger.error("Database error: %s", str(e))
         raise e
 
-def get_meal_by_id(meal_id: int) -> Meal:
+def get_meal_by_id(meal_id: int) -> Meal: # Done
     """
     Retrieves a meal by its meal ID.
     
@@ -208,7 +208,7 @@ def get_meal_by_id(meal_id: int) -> Meal:
         raise e
 
 
-def get_meal_by_name(meal_name: str) -> Meal:
+def get_meal_by_name(meal_name: str) -> Meal: # Done
     """
     Retrieves a meal by its name.
     
