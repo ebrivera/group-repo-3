@@ -1,14 +1,14 @@
  #!/bin/bash
 
 # Define the base URL for the Flask API
-BASE_URL = "http://localhost:5000/api"
+BASE_URL="http://localhost:5001/api"
 
 # Flag to control whether to echo JSON output
 
-ECHO_JSON = false
+ECHO_JSON=false
 
 # Parse command-line arguments
-while [ "$#" -gt 0]; do
+while [ "$#" -gt 0 ]; do
     case $1 in 
         --echo-json) ECHO_JSON=true ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;; 
@@ -25,14 +25,16 @@ while [ "$#" -gt 0]; do
 # Function to check the health of the service
 check_health() {
     echo "Checking health status..."
-    curl -s -X GET "BASE_URL/health" | grep -q '"status": "healthy"'
-    if [$? -eq 0 ]; then
+    curl -s -X GET "$BASE_URL/health" | grep -q '"status": "healthy"'
+    if [ $? -eq 0 ]; then
         echo "Service is healthy."
     else 
         echo "Health check failed."
         exit 1
     fi
 }
+
+
 
 # Function to check the database connection
 check_db() {
@@ -186,6 +188,7 @@ prep_combatant() {
     fi
   else
     echo "Failed to prepare combatant ($meal_name)."
+    echo "Response: $response"
     exit 1
   fi
 }
@@ -218,12 +221,20 @@ check_db
 clear_catalog
 create_meal "Pizza" "Italian" 10.0 "MED"
 create_meal "Burger" "American" 8.0 "LOW"
+create_meal "Sushi" "Japanese" 12.5 "HIGH"
 get_meal_by_name "Pizza"
+get_meal_by_name "Burger"
 get_meal_by_id 1
-delete_meal_by_id 2
+clear_combatants
 prep_combatant "Pizza"
-prep_combatant "Burger"
+prep_combatant "Sushi"
 get_combatants
 battle
-clear_combatants
 get_leaderboard "wins"
+clear_combatants
+prep_combatant "Burger"
+prep_combatant "Sushi"
+battle
+delete_meal_by_id 1
+get_leaderboard "wins"
+clear_catalog
