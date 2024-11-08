@@ -140,11 +140,8 @@ def test_battle_two_combatants(battle_model, sample_meal1, sample_meal2, mocker)
     """Test that battle returns the correct winner and updates stats."""
 
     # Mock `get_random` to return a consistent value
-    mock_random = mocker.patch("music_collection.models.song_model.get_random", return_value=0.5)
-
-    # Mock `update_meal_stats` to track calls
-    mock_update_meal_stats = mocker.patch("meal_max.models.kitchen_model.update_meal_stats")
-
+    mock_random = mocker.patch("meal_max.utils.random_utils.get_random", return_value=0.5)
+    mock_update_meal_stats = mocker.patch("meal_max.models.battle_model.update_meal_stats")
     # Prepare combatants
     battle_model.prep_combatant(sample_meal1)
     battle_model.prep_combatant(sample_meal2)
