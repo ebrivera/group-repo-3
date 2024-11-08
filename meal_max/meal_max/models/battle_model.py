@@ -87,9 +87,9 @@ class BattleModel:
 
         return winner.meal
 
-    def clear_combatants(self):
+    def clear_combatants(self): 
         """
-        Clear all meals from the playlist. 
+        Clear all meals from the list of combatants. 
         """
         logger.info("Clearing the combatants list.")
         self.combatants.clear()
